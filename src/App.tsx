@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState, useTransition, type ReactNode } from "react";
 
 type Page = "Home" | "Campus Directory" | "Events" | "Student Services" | "Campus Chatbot";
 
@@ -300,6 +300,9 @@ function Header({
           aria-label={`Search ${page === "Home" ? "the campus hub" : page.toLowerCase()}`}
           onChange={(e) => onSearch(e.target.value)}
           placeholder={page === "Home" ? "Search the campus hub…" : `Search ${page.toLowerCase()}…`}
+          autoComplete="off"
+          enterKeyHint="search"
+          spellCheck={false}
         />
         <kbd>⌘ K</kbd>
       </div>
@@ -823,6 +826,7 @@ function EmptyState() {
 export default function App() {
   const [page, setPage] = useState<Page>("Home");
   const [search, setSearch] = useState("");
+  const [isNavigating, startNavigation] = useTransition();
   const [dark, setDark] = useState(() => {
     const saved = localStorage.getItem("usiu-theme");
     return saved ? saved === "dark" : window.matchMedia("(prefers-color-scheme: dark)").matches;
@@ -842,9 +846,12 @@ export default function App() {
     return () => window.removeEventListener("keydown", handleShortcut);
   }, []);
   const go = (next: Page) => {
-    setPage(next);
-    setSearch("");
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    if (next === page) return;
+    startNavigation(() => {
+      setPage(next);
+      setSearch("");
+    });
+    window.scrollTo({ top: 0, behavior: "auto" });
   };
   return (
     <div className="app-shell">
@@ -856,8 +863,8 @@ export default function App() {
           dark={dark}
           onToggleTheme={() => setDark((current) => !current)}
         />
-        <main id="main-content">
-          <div className="page-stage" key={page}>
+        <main id="main-content" aria-busy={isNavigating}>
+          <div className={`page-stage ${isNavigating ? "is-navigating" : ""}`} key={page}>
             {page === "Home" && <Home go={go} />}
             {page === "Campus Directory" && <Directory search={search} />}
             {page === "Events" && <Events search={search} />}
