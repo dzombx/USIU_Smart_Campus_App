@@ -99,6 +99,12 @@ const iconPaths: Record<string, ReactNode> = {
       <path d="M22 2 11 13" />
     </>
   ),
+  copy: (
+    <>
+      <rect x="8" y="8" width="11" height="11" rx="2" />
+      <path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" />
+    </>
+  ),
   sun: (
     <>
       <circle cx="12" cy="12" r="4" />
@@ -528,6 +534,7 @@ function Directory({ search }: { search: string }) {
             key={item}
             className={`filter ${filter === item ? "active" : ""}`}
             onClick={() => setFilter(item)}
+            aria-pressed={filter === item}
           >
             {item}
           </button>
@@ -581,6 +588,7 @@ function Events({ search }: { search: string }) {
             key={item}
             className={`filter ${filter === item ? "active" : ""}`}
             onClick={() => setFilter(item)}
+            aria-pressed={filter === item}
           >
             {item}
           </button>
@@ -588,7 +596,7 @@ function Events({ search }: { search: string }) {
       </div>
       <div className="event-page-list">
         {visible.map((event) => (
-          <article className="event-page-card" key={event.title}>
+          <article className={`event-page-card ${event.color}`} key={event.title}>
             <span className="date-box large">
               <small>{event.month}</small>
               <strong>{event.day}</strong>
@@ -683,6 +691,30 @@ function Services({ search }: { search: string }) {
   );
 }
 
+function BotMessage({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+  const copy = async () => {
+    if (!navigator.clipboard) return;
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1400);
+    } catch {
+      setCopied(false);
+    }
+  };
+
+  return (
+    <div className="message bot-message">
+      <span>{text}</span>
+      <button type="button" className="message-copy" onClick={copy} aria-label="Copy answer">
+        <Icon name="copy" size={14} />
+        <span>{copied ? "Copied" : "Copy"}</span>
+      </button>
+    </div>
+  );
+}
+
 function Chatbot() {
   const [messages, setMessages] = useState([
     {
@@ -743,11 +775,15 @@ function Chatbot() {
           </div>
         </div>
         <div className="messages" role="log" aria-live="polite" aria-label="Chat messages">
-          {messages.map((m, i) => (
-            <div key={i} className={`message ${m.from}`}>
-              {m.text}
-            </div>
-          ))}
+          {messages.map((m, i) =>
+            m.from === "bot" ? (
+              <BotMessage key={i} text={m.text} />
+            ) : (
+              <div key={i} className="message user">
+                {m.text}
+              </div>
+            ),
+          )}
         </div>
         <div className="suggestions">
           <button type="button" onClick={() => setInput("Where is the library?")}>
