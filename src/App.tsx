@@ -1,4 +1,4 @@
-import { useEffect, useState, useTransition, type ReactNode } from "react";
+import { useEffect, useRef, useState, useTransition, type ReactNode } from "react";
 
 type Page = "Home" | "Campus Directory" | "Events" | "Student Services" | "Campus Chatbot";
 
@@ -287,8 +287,35 @@ function Header({
   dark: boolean;
   onToggleTheme: () => void;
 }) {
+  const [openPopover, setOpenPopover] = useState<"notifications" | "account" | null>(null);
+  const [hasUnread, setHasUnread] = useState(true);
+  const [accountNotice, setAccountNotice] = useState("");
+  const headerRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    const closeOnOutsidePointer = (event: PointerEvent) => {
+      if (event.target instanceof Node && !headerRef.current?.contains(event.target)) {
+        setOpenPopover(null);
+      }
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpenPopover(null);
+    };
+    document.addEventListener("pointerdown", closeOnOutsidePointer);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeOnOutsidePointer);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, []);
+
+  const togglePopover = (popover: "notifications" | "account") => {
+    setAccountNotice("");
+    setOpenPopover((current) => (current === popover ? null : popover));
+  };
+
   return (
-    <header className="topbar">
+    <header className="topbar" ref={headerRef}>
       <div className="mobile-brand">
         <span className="brand-mark">
           <span>U</span>
@@ -326,13 +353,94 @@ function Header({
           <Icon name="moon" size={14} />
         </span>
       </button>
-      <button type="button" className="icon-button" aria-label="Notifications">
-        <Icon name="bell" size={20} />
-        <i />
-      </button>
-      <button type="button" className="mobile-avatar" aria-label="Open profile">
-        AM
-      </button>
+      <div className="popover-anchor">
+        <button
+          type="button"
+          className="icon-button"
+          aria-label="Notifications"
+          aria-expanded={openPopover === "notifications"}
+          aria-controls="notifications-popover"
+          onClick={() => togglePopover("notifications")}
+        >
+          <Icon name="bell" size={20} />
+          {hasUnread && <i />}
+        </button>
+        {openPopover === "notifications" && (
+          <div
+            className="popover notifications-popover"
+            id="notifications-popover"
+            role="dialog"
+            aria-label="Notifications"
+          >
+            <div className="popover-heading">
+              <strong>Notifications</strong>
+              <button type="button" onClick={() => setHasUnread(false)} disabled={!hasUnread}>
+                {hasUnread ? "Mark read" : "All read"}
+              </button>
+            </div>
+            <div className="notification-item">
+              <span className="notification-dot" />
+              <div>
+                <strong>Campus hub is ready</strong>
+                <p>Browse official services, contacts, and upcoming events.</p>
+              </div>
+            </div>
+            <span className="popover-footnote">Notifications will appear here when connected.</span>
+          </div>
+        )}
+      </div>
+      <div className="popover-anchor account-anchor">
+        <button
+          type="button"
+          className="mobile-avatar account-button"
+          aria-label="Open profile"
+          aria-expanded={openPopover === "account"}
+          aria-controls="account-popover"
+          onClick={() => togglePopover("account")}
+        >
+          AM
+        </button>
+        {openPopover === "account" && (
+          <div
+            className="popover account-popover"
+            id="account-popover"
+            role="dialog"
+            aria-label="Account menu"
+          >
+            <div className="account-summary">
+              <div className="avatar">AM</div>
+              <div>
+                <strong>Alex Morgan</strong>
+                <span>Demo student profile</span>
+              </div>
+            </div>
+            <button
+              type="button"
+              className="popover-action"
+              onClick={() =>
+                setAccountNotice("Profile settings are ready for your student account connection.")
+              }
+            >
+              Profile settings
+            </button>
+            <button
+              type="button"
+              className="popover-action"
+              onClick={() => {
+                onToggleTheme();
+                setOpenPopover(null);
+              }}
+            >
+              Switch to {dark ? "light" : "dark"} mode
+            </button>
+            {accountNotice && (
+              <span className="popover-status" role="status">
+                {accountNotice}
+              </span>
+            )}
+          </div>
+        )}
+      </div>
     </header>
   );
 }
@@ -863,6 +971,12 @@ export default function App() {
   const [page, setPage] = useState<Page>("Home");
   const [search, setSearch] = useState("");
   const [isNavigating, startNavigation] = useTransition();
+  const [pullDistance, setPullDistance] = useState(0);
+  const [refreshState, setRefreshState] = useState<"idle" | "pulling" | "ready" | "refreshing">(
+    "idle",
+  );
+  const pullDistanceRef = useRef(0);
+  const refreshStateRef = useRef<"idle" | "pulling" | "ready" | "refreshing">("idle");
   const [dark, setDark] = useState(() => {
     const saved = localStorage.getItem("usiu-theme");
     return saved ? saved === "dark" : window.matchMedia("(prefers-color-scheme: dark)").matches;
@@ -925,6 +1039,69 @@ export default function App() {
       document.documentElement.removeEventListener("mouseleave", hideGlow);
     };
   }, []);
+  useEffect(() => {
+    const threshold = 58;
+    let startY = 0;
+    let tracking = false;
+    let refreshTimer = 0;
+
+    const handleTouchStart = (event: TouchEvent) => {
+      if (window.scrollY <= 1 && event.touches.length === 1) {
+        startY = event.touches[0].clientY;
+        tracking = true;
+      }
+    };
+    const handleTouchMove = (event: TouchEvent) => {
+      if (!tracking || event.touches.length !== 1 || refreshStateRef.current === "refreshing")
+        return;
+      const delta = event.touches[0].clientY - startY;
+      if (delta <= 0) {
+        tracking = false;
+        pullDistanceRef.current = 0;
+        setPullDistance(0);
+        refreshStateRef.current = "idle";
+        setRefreshState("idle");
+        return;
+      }
+      const distance = Math.min(92, delta * 0.42);
+      pullDistanceRef.current = distance;
+      setPullDistance(distance);
+      refreshStateRef.current = distance >= threshold ? "ready" : "pulling";
+      setRefreshState(distance >= threshold ? "ready" : "pulling");
+      if (event.cancelable) event.preventDefault();
+    };
+    const handleTouchEnd = () => {
+      if (!tracking) return;
+      tracking = false;
+      if (pullDistanceRef.current >= threshold) {
+        refreshStateRef.current = "refreshing";
+        setRefreshState("refreshing");
+        pullDistanceRef.current = 66;
+        setPullDistance(66);
+        refreshTimer = window.setTimeout(() => {
+          refreshStateRef.current = "idle";
+          pullDistanceRef.current = 0;
+          setRefreshState("idle");
+          setPullDistance(0);
+        }, 650);
+      } else {
+        refreshStateRef.current = "idle";
+        pullDistanceRef.current = 0;
+        setRefreshState("idle");
+        setPullDistance(0);
+      }
+    };
+
+    window.addEventListener("touchstart", handleTouchStart, { passive: true });
+    window.addEventListener("touchmove", handleTouchMove, { passive: false });
+    window.addEventListener("touchend", handleTouchEnd, { passive: true });
+    return () => {
+      window.clearTimeout(refreshTimer);
+      window.removeEventListener("touchstart", handleTouchStart);
+      window.removeEventListener("touchmove", handleTouchMove);
+      window.removeEventListener("touchend", handleTouchEnd);
+    };
+  }, []);
   const go = (next: Page) => {
     if (next === page) return;
     startNavigation(() => {
@@ -936,6 +1113,23 @@ export default function App() {
   return (
     <div className="app-shell">
       <div className="cursor-underglow" aria-hidden="true" />
+      <div
+        className={`pull-refresh ${refreshState}`}
+        style={{ transform: `translate3d(-50%, ${Math.max(0, pullDistance - 42)}px, 0)` }}
+        role="status"
+        aria-live="polite"
+      >
+        <span className="refresh-glyph">
+          <Icon name="arrow" size={15} />
+        </span>
+        <span>
+          {refreshState === "refreshing"
+            ? "Refreshing campus hub"
+            : refreshState === "ready"
+              ? "Release to refresh"
+              : "Pull to refresh"}
+        </span>
+      </div>
       <Sidebar active={page} onChange={go} />
       <div className="main-column">
         <Header

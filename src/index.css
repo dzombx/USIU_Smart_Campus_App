@@ -2045,3 +2045,229 @@ main[aria-busy="true"] .page-stage {
     display: none;
   }
 }
+
+/* Native scrolling stays in charge: browsers and trackpads provide the best inertia. */
+html {
+  scroll-behavior: smooth;
+  overscroll-behavior-y: auto;
+}
+
+body {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+.popover-anchor {
+  position: relative;
+}
+
+.account-button {
+  display: grid;
+}
+
+.popover {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  z-index: 50;
+  width: 276px;
+  padding: 14px;
+  border: 1px solid color-mix(in srgb, var(--border) 82%, white 18%);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--surface) 88%, transparent);
+  color: var(--text);
+  box-shadow:
+    0 18px 42px #0b24421c,
+    inset 0 1px 0 #ffffff85;
+  backdrop-filter: blur(18px) saturate(135%);
+  -webkit-backdrop-filter: blur(18px) saturate(135%);
+  animation: popover-in 160ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.popover-heading,
+.account-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.popover-heading strong {
+  font-size: 12px;
+}
+
+.popover-heading button {
+  color: var(--campus-blue);
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.popover-heading button:disabled {
+  color: var(--muted);
+  opacity: 0.7;
+}
+
+.notification-item {
+  display: flex;
+  gap: 9px;
+  padding: 13px 0 11px;
+  margin-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
+.notification-dot {
+  width: 7px;
+  height: 7px;
+  flex: none;
+  margin-top: 4px;
+  border-radius: 50%;
+  background: #e57a44;
+  box-shadow: 0 0 0 4px #e57a4418;
+}
+
+.notification-item strong {
+  display: block;
+  font-size: 10.5px;
+}
+
+.notification-item p,
+.popover-footnote,
+.account-summary span,
+.popover-status {
+  display: block;
+  color: var(--muted);
+  font-size: 9.5px;
+  line-height: 1.45;
+  margin-top: 4px;
+}
+
+.popover-footnote {
+  padding-top: 9px;
+  border-top: 1px solid var(--border);
+}
+
+.account-summary {
+  justify-content: flex-start;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.account-summary .avatar {
+  width: 36px;
+  height: 36px;
+}
+
+.account-summary strong {
+  display: block;
+  font-size: 11px;
+}
+
+.popover-action {
+  width: 100%;
+  margin-top: 8px;
+  padding: 9px 10px;
+  border-radius: 8px;
+  text-align: left;
+  color: var(--text);
+  font-size: 10px;
+}
+
+.popover-action:hover,
+.popover-action:focus-visible {
+  background: var(--surface-soft);
+  color: var(--campus-blue);
+}
+
+.popover-status {
+  padding: 8px 9px;
+  border-radius: 8px;
+  background: var(--surface-soft);
+}
+
+.pull-refresh {
+  position: fixed;
+  left: 50%;
+  top: 10px;
+  z-index: 40;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 10px 7px 7px;
+  border: 1px solid color-mix(in srgb, var(--border) 82%, white 18%);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface) 86%, transparent);
+  color: var(--muted);
+  box-shadow:
+    0 10px 26px #0b24421a,
+    inset 0 1px 0 #ffffff75;
+  font-size: 9px;
+  font-weight: 700;
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity 160ms ease,
+    transform 180ms cubic-bezier(0.22, 1, 0.36, 1);
+  backdrop-filter: blur(14px) saturate(130%);
+  -webkit-backdrop-filter: blur(14px) saturate(130%);
+}
+
+.pull-refresh.pulling,
+.pull-refresh.ready,
+.pull-refresh.refreshing {
+  opacity: 1;
+}
+
+.refresh-glyph {
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--campus-blue);
+  background: var(--blue-soft);
+  transition:
+    transform var(--motion-base),
+    background-color var(--motion-fast);
+}
+
+.pull-refresh.ready .refresh-glyph {
+  color: #6c4f19;
+  background: var(--yellow-soft);
+  transform: rotate(90deg);
+}
+
+.pull-refresh.refreshing .refresh-glyph {
+  animation: refresh-spin 700ms linear infinite;
+}
+
+@keyframes popover-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, -5px, 0) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@keyframes refresh-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .popover,
+  .pull-refresh,
+  .refresh-glyph {
+    animation: none;
+    transition: none;
+  }
+}
