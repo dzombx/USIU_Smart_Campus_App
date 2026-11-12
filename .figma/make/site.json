@@ -1,0 +1,10 @@
+{
+  "description": "A student life hub with campus directory, events, student services, and chatbot links that helps students find campus information and support.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}
