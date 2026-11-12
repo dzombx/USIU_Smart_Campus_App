@@ -218,7 +218,12 @@ const upcomingEvents = events.filter((event) => new Date(`${event.date}T23:59:59
 function Sidebar({ active, onChange }: { active: Page; onChange: (page: Page) => void }) {
   return (
     <aside className="sidebar">
-      <button className="brand" onClick={() => onChange("Home")} aria-label="Go to home">
+      <button
+        type="button"
+        className="brand"
+        onClick={() => onChange("Home")}
+        aria-label="Go to home"
+      >
         <span className="brand-mark">
           <span>U</span>
         </span>
@@ -231,9 +236,11 @@ function Sidebar({ active, onChange }: { active: Page; onChange: (page: Page) =>
         <p className="nav-label">CAMPUS HUB</p>
         {navItems.map((item) => (
           <button
+            type="button"
             key={item.label}
             className={`nav-item ${active === item.label ? "active" : ""}`}
             onClick={() => onChange(item.label)}
+            aria-current={active === item.label ? "page" : undefined}
           >
             <Icon name={item.icon} size={19} />
             <span>{item.label}</span>
@@ -255,7 +262,9 @@ function Sidebar({ active, onChange }: { active: Page; onChange: (page: Page) =>
           <strong>Alex Morgan</strong>
           <span>Demo profile</span>
         </div>
-        <button aria-label="Profile options">•••</button>
+        <button type="button" aria-label="Profile options">
+          •••
+        </button>
       </div>
     </aside>
   );
@@ -280,16 +289,22 @@ function Header({
         </span>
         <strong>USIU Smart Campus</strong>
       </div>
+      <div className="topbar-context" aria-live="polite">
+        <span>USIU-AFRICA · CAMPUS HUB</span>
+        <strong>{page}</strong>
+      </div>
       <div className="search-wrap">
         <Icon name="search" size={18} />
         <input
-          aria-label="Search the prototype"
+          id="campus-search"
+          aria-label={`Search ${page === "Home" ? "the campus hub" : page.toLowerCase()}`}
           onChange={(e) => onSearch(e.target.value)}
           placeholder={page === "Home" ? "Search the campus hub…" : `Search ${page.toLowerCase()}…`}
         />
         <kbd>⌘ K</kbd>
       </div>
       <button
+        type="button"
         className="theme-toggle"
         onClick={onToggleTheme}
         aria-label={`Switch to ${dark ? "light" : "dark"} mode`}
@@ -302,11 +317,13 @@ function Header({
           <Icon name="moon" size={14} />
         </span>
       </button>
-      <button className="icon-button" aria-label="Notifications">
+      <button type="button" className="icon-button" aria-label="Notifications">
         <Icon name="bell" size={20} />
         <i />
       </button>
-      <button className="mobile-avatar">AM</button>
+      <button type="button" className="mobile-avatar" aria-label="Open profile">
+        AM
+      </button>
     </header>
   );
 }
@@ -692,13 +709,14 @@ function Chatbot() {
     return "I don’t have a verified answer for that yet. Please use the official source links in the Directory and Student Services, or contact USIU-Africa’s main line at +254 730 116 000.";
   };
   const send = () => {
-    if (!input.trim()) return;
-    setMessages([
-      ...messages,
-      { from: "user", text: input },
+    const question = input.trim();
+    if (!question) return;
+    setMessages((current) => [
+      ...current,
+      { from: "user", text: question },
       {
         from: "bot",
-        text: answer(input),
+        text: answer(question),
       },
     ]);
     setInput("");
@@ -721,7 +739,7 @@ function Chatbot() {
             </span>
           </div>
         </div>
-        <div className="messages">
+        <div className="messages" role="log" aria-live="polite" aria-label="Chat messages">
           {messages.map((m, i) => (
             <div key={i} className={`message ${m.from}`}>
               {m.text}
@@ -729,22 +747,30 @@ function Chatbot() {
           ))}
         </div>
         <div className="suggestions">
-          <button onClick={() => setInput("Where is the library?")}>Where is the library?</button>
-          <button onClick={() => setInput("Show me upcoming events")}>
+          <button type="button" onClick={() => setInput("Where is the library?")}>
+            Where is the library?
+          </button>
+          <button type="button" onClick={() => setInput("Show me upcoming events")}>
             What events are coming up?
           </button>
         </div>
-        <div className="composer">
+        <form
+          className="composer"
+          onSubmit={(event) => {
+            event.preventDefault();
+            send();
+          }}
+        >
           <input
+            aria-label="Ask the campus assistant"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && send()}
             placeholder="Ask about campus services…"
           />
-          <button onClick={send} aria-label="Send message">
+          <button type="submit" aria-label="Send message" disabled={!input.trim()}>
             <Icon name="send" size={19} />
           </button>
-        </div>
+        </form>
       </div>
     </PageShell>
   );
@@ -761,11 +787,12 @@ function PageShell({
   description: string;
   children: ReactNode;
 }) {
+  const headingId = `${title.toLowerCase().replace(/\s+/g, "-")}-title`;
   return (
     <>
-      <section className="page-title">
+      <section className="page-title" aria-labelledby={headingId}>
         <span className="section-kicker">{kicker}</span>
-        <h1>{title}</h1>
+        <h1 id={headingId}>{title}</h1>
         <p>{description}</p>
       </section>
       <div className="prototype-notice">
@@ -804,6 +831,16 @@ export default function App() {
     document.documentElement.dataset.theme = dark ? "dark" : "light";
     localStorage.setItem("usiu-theme", dark ? "dark" : "light");
   }, [dark]);
+  useEffect(() => {
+    const handleShortcut = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        document.getElementById("campus-search")?.focus();
+      }
+    };
+    window.addEventListener("keydown", handleShortcut);
+    return () => window.removeEventListener("keydown", handleShortcut);
+  }, []);
   useEffect(() => {
     if (!window.matchMedia("(pointer: fine)").matches) return;
 
@@ -864,7 +901,7 @@ export default function App() {
           dark={dark}
           onToggleTheme={() => setDark((current) => !current)}
         />
-        <main>
+        <main id="main-content">
           <div className="page-stage" key={page}>
             {page === "Home" && <Home go={go} />}
             {page === "Campus Directory" && <Directory search={search} />}
@@ -876,9 +913,11 @@ export default function App() {
         <nav className="mobile-nav" aria-label="Mobile navigation">
           {navItems.map((item) => (
             <button
+              type="button"
               key={item.label}
               onClick={() => go(item.label)}
               className={page === item.label ? "active" : ""}
+              aria-current={page === item.label ? "page" : undefined}
             >
               <Icon name={item.icon} size={20} />
               <span>
