@@ -1146,56 +1146,9 @@ main {
   }
 }
 
-/* Subtle liquid-glass motion and cursor underglow */
+/* Subtle liquid-glass motion */
 :root {
-  --pointer-x: 50vw;
-  --pointer-y: 50vh;
   --motion-ease: cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-.cursor-underglow {
-  position: fixed;
-  z-index: 100;
-  left: 0;
-  top: 0;
-  width: 54px;
-  height: 54px;
-  border-radius: 50%;
-  pointer-events: none;
-  opacity: 0;
-  transform: translate3d(var(--pointer-x), var(--pointer-y), 0) translate3d(-50%, -50%, 0)
-    scale(0.72);
-  background:
-    radial-gradient(circle at 38% 35%, #ffffffd9 0 5%, transparent 18%),
-    radial-gradient(
-      circle,
-      color-mix(in srgb, var(--campus-yellow) 42%, transparent),
-      transparent 68%
-    );
-  border: 1px solid color-mix(in srgb, var(--campus-blue) 18%, white 50%);
-  box-shadow:
-    0 0 22px color-mix(in srgb, var(--campus-yellow) 28%, transparent),
-    0 8px 28px color-mix(in srgb, var(--campus-blue) 22%, transparent),
-    inset 3px 4px 10px #ffffff42,
-    inset -4px -5px 12px color-mix(in srgb, var(--campus-blue) 18%, transparent);
-  backdrop-filter: blur(1px) saturate(120%);
-  transition:
-    width 0.35s var(--motion-ease),
-    height 0.35s var(--motion-ease),
-    opacity 0.16s ease;
-  will-change: transform, width, height, opacity;
-}
-
-.cursor-underglow.is-visible {
-  opacity: 0.72;
-  transform: translate3d(var(--pointer-x), var(--pointer-y), 0) translate3d(-50%, -50%, 0) scale(1);
-}
-
-.cursor-underglow.is-hovering {
-  width: 76px;
-  height: 76px;
-  opacity: 0.88;
-  transform: translate3d(var(--pointer-x), var(--pointer-y), 0) translate3d(-50%, -50%, 0) scale(1);
 }
 
 .topbar {
@@ -1222,29 +1175,6 @@ main {
   position: relative;
   isolation: isolate;
   overflow: hidden;
-}
-
-.quick-card::before,
-.directory-card::before,
-.event-page-card::before,
-.service-card::before,
-.event-list::before,
-.ask-card::before,
-.chat-shell::before,
-.prototype-notice::before {
-  content: "";
-  position: absolute;
-  z-index: 0;
-  inset: 0;
-  pointer-events: none;
-  opacity: 0;
-  background: radial-gradient(
-    280px circle at var(--pointer-x) var(--pointer-y),
-    color-mix(in srgb, var(--campus-blue) 13%, white 15%),
-    transparent 58%
-  );
-  background-attachment: fixed;
-  transition: opacity 0.45s ease;
 }
 
 .quick-card > *,
@@ -1287,17 +1217,6 @@ main {
     inset 1px 0 0 #ffffff20;
   opacity: 0.55;
   transition: opacity 0.35s ease;
-}
-
-.quick-card:hover::before,
-.directory-card:hover::before,
-.event-page-card:hover::before,
-.service-card:hover::before,
-.event-list:hover::before,
-.ask-card:hover::before,
-.chat-shell:hover::before,
-.prototype-notice:hover::before {
-  opacity: 1;
 }
 
 .quick-card:hover::after,
