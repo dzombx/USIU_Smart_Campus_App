@@ -1153,24 +1153,18 @@ main {
   --motion-ease: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-.liquid-filter {
-  position: fixed;
-  width: 0;
-  height: 0;
-  pointer-events: none;
-}
-
 .cursor-underglow {
   position: fixed;
   z-index: 100;
-  left: var(--pointer-x);
-  top: var(--pointer-y);
+  left: 0;
+  top: 0;
   width: 54px;
   height: 54px;
   border-radius: 50%;
   pointer-events: none;
   opacity: 0;
-  transform: translate3d(-50%, -50%, 0) scale(0.72);
+  transform: translate3d(var(--pointer-x), var(--pointer-y), 0) translate3d(-50%, -50%, 0)
+    scale(0.72);
   background:
     radial-gradient(circle at 38% 35%, #ffffffd9 0 5%, transparent 18%),
     radial-gradient(
@@ -1184,26 +1178,24 @@ main {
     0 8px 28px color-mix(in srgb, var(--campus-blue) 22%, transparent),
     inset 3px 4px 10px #ffffff42,
     inset -4px -5px 12px color-mix(in srgb, var(--campus-blue) 18%, transparent);
-  backdrop-filter: blur(2px) saturate(150%);
-  filter: url("#liquid-refraction");
+  backdrop-filter: blur(1px) saturate(120%);
   transition:
     width 0.35s var(--motion-ease),
     height 0.35s var(--motion-ease),
-    opacity 0.2s ease,
-    transform 0.35s var(--motion-ease);
-  will-change: left, top, width, height, transform;
+    opacity 0.16s ease;
+  will-change: transform, width, height, opacity;
 }
 
 .cursor-underglow.is-visible {
   opacity: 0.72;
-  transform: translate3d(-50%, -50%, 0) scale(1);
+  transform: translate3d(var(--pointer-x), var(--pointer-y), 0) translate3d(-50%, -50%, 0) scale(1);
 }
 
 .cursor-underglow.is-hovering {
   width: 76px;
   height: 76px;
   opacity: 0.88;
-  transform: translate3d(-50%, -50%, 0) scale(1);
+  transform: translate3d(var(--pointer-x), var(--pointer-y), 0) translate3d(-50%, -50%, 0) scale(1);
 }
 
 .topbar {

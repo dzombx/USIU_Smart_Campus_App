@@ -842,26 +842,42 @@ export default function App() {
     return () => window.removeEventListener("keydown", handleShortcut);
   }, []);
   useEffect(() => {
-    if (!window.matchMedia("(pointer: fine)").matches) return;
+    const pointerQuery = window.matchMedia("(pointer: fine)");
+    const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+    if (!pointerQuery.matches || motionQuery.matches) return;
 
     const root = document.documentElement;
     const glow = document.querySelector<HTMLElement>(".cursor-underglow");
     let frame = 0;
+    let pointerX = window.innerWidth / 2;
+    let pointerY = window.innerHeight / 2;
+    let isHovering = false;
+
+    const renderGlow = () => {
+      frame = 0;
+      root.style.setProperty("--pointer-x", `${pointerX}px`);
+      root.style.setProperty("--pointer-y", `${pointerY}px`);
+    };
 
     const moveGlow = (event: PointerEvent) => {
-      cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(() => {
-        root.style.setProperty("--pointer-x", `${event.clientX}px`);
-        root.style.setProperty("--pointer-y", `${event.clientY}px`);
-        glow?.classList.add("is-visible");
-        glow?.classList.toggle(
-          "is-hovering",
-          event.target instanceof Element &&
-            Boolean(event.target.closest("a, button, input, .quick-card, .service-card")),
-        );
-      });
+      pointerX = event.clientX;
+      pointerY = event.clientY;
+      const nextIsHovering =
+        event.target instanceof Element &&
+        Boolean(event.target.closest("a, button, input, .quick-card, .service-card"));
+
+      if (nextIsHovering !== isHovering) {
+        isHovering = nextIsHovering;
+        glow?.classList.toggle("is-hovering", isHovering);
+      }
+
+      glow?.classList.add("is-visible");
+      if (!frame) frame = requestAnimationFrame(renderGlow);
     };
-    const hideGlow = () => glow?.classList.remove("is-visible");
+    const hideGlow = () => {
+      glow?.classList.remove("is-visible", "is-hovering");
+      isHovering = false;
+    };
 
     window.addEventListener("pointermove", moveGlow, { passive: true });
     document.documentElement.addEventListener("mouseleave", hideGlow);
@@ -878,20 +894,6 @@ export default function App() {
   };
   return (
     <div className="app-shell">
-      <svg className="liquid-filter" aria-hidden="true">
-        <defs>
-          <filter id="liquid-refraction" x="-30%" y="-30%" width="160%" height="160%">
-            <feTurbulence
-              type="fractalNoise"
-              baseFrequency="0.018 0.045"
-              numOctaves="2"
-              seed="7"
-              result="noise"
-            />
-            <feDisplacementMap in="SourceGraphic" in2="noise" scale="7" />
-          </filter>
-        </defs>
-      </svg>
       <div className="cursor-underglow" aria-hidden="true" />
       <Sidebar active={page} onChange={go} />
       <div className="main-column">
