@@ -1367,12 +1367,6 @@ a {
   }
 }
 
-@media (pointer: coarse), (max-width: 760px) {
-  .cursor-underglow {
-    display: none;
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -1383,9 +1377,6 @@ a {
     transition-duration: 0.01ms !important;
   }
 
-  .cursor-underglow {
-    display: none;
-  }
 }
 
 /* Blue, yellow and white campus theme */
