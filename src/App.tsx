@@ -881,6 +881,50 @@ export default function App() {
     window.addEventListener("keydown", handleShortcut);
     return () => window.removeEventListener("keydown", handleShortcut);
   }, []);
+  useEffect(() => {
+    const pointerQuery = window.matchMedia("(pointer: fine)");
+    const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+    if (!pointerQuery.matches || motionQuery.matches) return;
+
+    const root = document.documentElement;
+    const glow = document.querySelector<HTMLElement>(".cursor-underglow");
+    let frame = 0;
+    let pointerX = window.innerWidth / 2;
+    let pointerY = window.innerHeight / 2;
+    let overReadableContent = false;
+
+    const renderGlow = () => {
+      frame = 0;
+      root.style.setProperty("--pointer-x", `${pointerX}px`);
+      root.style.setProperty("--pointer-y", `${pointerY}px`);
+    };
+
+    const moveGlow = (event: PointerEvent) => {
+      pointerX = event.clientX;
+      pointerY = event.clientY;
+      const nextOverReadableContent =
+        event.target instanceof Element &&
+        Boolean(event.target.closest("p,h1,h2,h3,h4,h5,span,a,button,input,label,li"));
+
+      if (nextOverReadableContent !== overReadableContent) {
+        overReadableContent = nextOverReadableContent;
+        glow?.classList.toggle("is-readable", overReadableContent);
+      }
+
+      glow?.classList.add("is-visible");
+      if (!frame) frame = requestAnimationFrame(renderGlow);
+    };
+
+    const hideGlow = () => glow?.classList.remove("is-visible", "is-readable");
+
+    window.addEventListener("pointermove", moveGlow, { passive: true });
+    document.documentElement.addEventListener("mouseleave", hideGlow);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener("pointermove", moveGlow);
+      document.documentElement.removeEventListener("mouseleave", hideGlow);
+    };
+  }, []);
   const go = (next: Page) => {
     if (next === page) return;
     startNavigation(() => {
@@ -891,6 +935,7 @@ export default function App() {
   };
   return (
     <div className="app-shell">
+      <div className="cursor-underglow" aria-hidden="true" />
       <Sidebar active={page} onChange={go} />
       <div className="main-column">
         <Header
