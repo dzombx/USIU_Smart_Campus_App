@@ -2271,3 +2271,238 @@ body {
     transition: none;
   }
 }
+
+/* Safe product polish: information-rich, accessible, and intentionally cheap to render. */
+.skip-link {
+  position: fixed;
+  left: 14px;
+  top: 10px;
+  z-index: 100;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--campus-blue-deep);
+  color: white;
+  font-size: 11px;
+  font-weight: 700;
+  transform: translateY(-150%);
+  transition: transform var(--motion-fast);
+}
+
+.skip-link:focus {
+  transform: translateY(0);
+}
+
+.topbar-context strong {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.connection-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--muted);
+  font-size: 8px;
+  font-weight: 600;
+  letter-spacing: 0;
+  vertical-align: middle;
+}
+
+.connection-status i {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #62a66b;
+}
+
+.connection-status.offline i {
+  background: #e57a44;
+}
+
+.contact-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.contact-copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--muted);
+  font-size: 8px;
+  opacity: 0;
+  transition:
+    opacity var(--motion-fast),
+    color var(--motion-fast);
+}
+
+.contact-action:hover .contact-copy,
+.contact-copy:focus-visible {
+  opacity: 1;
+}
+
+.contact-copy:hover,
+.contact-copy:focus-visible {
+  color: var(--campus-blue);
+}
+
+.chat-header {
+  position: relative;
+}
+
+.chat-clear {
+  margin-left: auto;
+  padding: 5px 8px;
+  border: 1px solid #ffffff2b;
+  border-radius: 7px;
+  color: #c4d6ef;
+  font-size: 9px;
+}
+
+.chat-clear:hover,
+.chat-clear:focus-visible {
+  color: white;
+  border-color: #ffffff60;
+  background: #ffffff12;
+}
+
+.chat-clear:disabled {
+  opacity: 0.45;
+}
+
+/* Replace the older cinematic motion with short compositor-only transitions. */
+.page-stage {
+  animation: page-reveal-fast 240ms var(--motion-ease) both;
+}
+
+.page-stage .quick-card,
+.page-stage .directory-card,
+.page-stage .event-page-card,
+.page-stage .service-card {
+  animation: card-rise-fast 260ms var(--motion-ease) both;
+}
+
+.quick-card,
+.directory-card,
+.event-page-card,
+.service-card {
+  will-change: auto;
+  transition:
+    transform 160ms var(--motion-ease),
+    border-color 160ms ease,
+    box-shadow 180ms var(--motion-ease),
+    background-color 160ms ease;
+}
+
+.hero-image {
+  transition: transform 420ms var(--motion-ease);
+}
+
+.hero:hover .hero-image {
+  transform: scale(1.012);
+}
+
+@keyframes page-reveal-fast {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 5px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes card-rise-fast {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 6px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@media (max-width: 760px) {
+  .connection-status {
+    display: none;
+  }
+
+  .topbar {
+    gap: 6px;
+  }
+
+  .topbar .search-wrap {
+    top: 62px;
+  }
+
+  .topbar .icon-button {
+    display: grid;
+    width: 34px;
+    height: 34px;
+  }
+
+  .topbar .popover {
+    position: fixed;
+    top: 58px;
+    right: 12px;
+    width: min(276px, calc(100vw - 24px));
+  }
+
+  .contact-copy {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page-stage,
+  .page-stage .quick-card,
+  .page-stage .directory-card,
+  .page-stage .event-page-card,
+  .page-stage .service-card {
+    animation: none;
+  }
+}
+
+.offline-banner {
+  position: fixed;
+  left: 50%;
+  top: 10px;
+  z-index: 45;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  max-width: calc(100vw - 24px);
+  padding: 8px 11px;
+  border: 1px solid #e8d3b8;
+  border-radius: 999px;
+  background: #fff8edee;
+  color: #7d5b32;
+  box-shadow: 0 10px 25px #7d5b3215;
+  font-size: 9px;
+  font-weight: 700;
+  transform: translateX(-50%);
+}
+
+.offline-banner .notification-dot {
+  width: 6px;
+  height: 6px;
+  flex: none;
+  margin: 0;
+  box-shadow: none;
+}
+
+@media (max-width: 760px) {
+  .offline-banner {
+    top: 70px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skip-link {
+    transition: none;
+  }
+}

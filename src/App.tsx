@@ -281,11 +281,13 @@ function Header({
   onSearch,
   dark,
   onToggleTheme,
+  isOnline,
 }: {
   page: Page;
   onSearch: (term: string) => void;
   dark: boolean;
   onToggleTheme: () => void;
+  isOnline: boolean;
 }) {
   const [openPopover, setOpenPopover] = useState<"notifications" | "account" | null>(null);
   const [hasUnread, setHasUnread] = useState(true);
@@ -313,6 +315,7 @@ function Header({
     setAccountNotice("");
     setOpenPopover((current) => (current === popover ? null : popover));
   };
+  const shortcutLabel = /Mac|iPhone|iPad/.test(navigator.platform) ? "⌘ K" : "Ctrl K";
 
   return (
     <header className="topbar" ref={headerRef}>
@@ -324,7 +327,12 @@ function Header({
       </div>
       <div className="topbar-context" aria-live="polite">
         <span>USIU-AFRICA · CAMPUS HUB</span>
-        <strong>{page}</strong>
+        <strong>
+          {page}
+          <span className={`connection-status ${isOnline ? "online" : "offline"}`}>
+            <i /> {isOnline ? "Online" : "Offline"}
+          </span>
+        </strong>
       </div>
       <div className="search-wrap">
         <Icon name="search" size={18} />
@@ -337,7 +345,7 @@ function Header({
           enterKeyHint="search"
           spellCheck={false}
         />
-        <kbd>⌘ K</kbd>
+        <kbd>{shortcutLabel}</kbd>
       </div>
       <button
         type="button"
@@ -661,8 +669,14 @@ function Directory({ search }: { search: string }) {
                 {entry.place}
               </p>
               <div className="contact-links">
-                <a href={`tel:${entry.phone.replace(/\s/g, "")}`}>{entry.phone}</a>
-                <a href={`mailto:${entry.email}`}>{entry.email}</a>
+                <span className="contact-action">
+                  <a href={`tel:${entry.phone.replace(/\s/g, "")}`}>{entry.phone}</a>
+                  <CopyContact value={entry.phone} label="Copy phone number" />
+                </span>
+                <span className="contact-action">
+                  <a href={`mailto:${entry.email}`}>{entry.email}</a>
+                  <CopyContact value={entry.email} label="Copy email address" />
+                </span>
               </div>
               <a className="source-link" href={entry.url} target="_blank" rel="noreferrer">
                 Official source ↗
@@ -673,6 +687,26 @@ function Directory({ search }: { search: string }) {
       </div>
       {!visible.length && <EmptyState />}
     </PageShell>
+  );
+}
+
+function CopyContact({ value, label }: { value: string; label: string }) {
+  const [copied, setCopied] = useState(false);
+  const copy = async () => {
+    if (!navigator.clipboard) return;
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1200);
+    } catch {
+      setCopied(false);
+    }
+  };
+  return (
+    <button type="button" className="contact-copy" onClick={copy} aria-label={label}>
+      <Icon name="copy" size={12} />
+      <span>{copied ? "Copied" : "Copy"}</span>
+    </button>
   );
 }
 
@@ -824,12 +858,11 @@ function BotMessage({ text }: { text: string }) {
 }
 
 function Chatbot() {
-  const [messages, setMessages] = useState([
-    {
-      from: "bot",
-      text: "Hi Alex. Ask me about official USIU-Africa contacts, student services, or currently listed events. Information was reviewed on November 8, 2026.",
-    },
-  ]);
+  const welcomeMessage = {
+    from: "bot",
+    text: "Hi Alex. Ask me about official USIU-Africa contacts, student services, or currently listed events. Information was reviewed on November 8, 2026.",
+  };
+  const [messages, setMessages] = useState([welcomeMessage]);
   const [input, setInput] = useState("");
   const answer = (question: string) => {
     const query = question.toLowerCase();
@@ -881,6 +914,14 @@ function Chatbot() {
               <i /> Official-source guide
             </span>
           </div>
+          <button
+            type="button"
+            className="chat-clear"
+            onClick={() => setMessages([welcomeMessage])}
+            disabled={messages.length === 1}
+          >
+            Clear
+          </button>
         </div>
         <div className="messages" role="log" aria-live="polite" aria-label="Chat messages">
           {messages.map((m, i) =>
@@ -970,6 +1011,7 @@ function EmptyState() {
 export default function App() {
   const [page, setPage] = useState<Page>("Home");
   const [search, setSearch] = useState("");
+  const [isOnline, setIsOnline] = useState(() => navigator.onLine);
   const [isNavigating, startNavigation] = useTransition();
   const [pullDistance, setPullDistance] = useState(0);
   const [refreshState, setRefreshState] = useState<"idle" | "pulling" | "ready" | "refreshing">(
@@ -1037,6 +1079,15 @@ export default function App() {
       cancelAnimationFrame(frame);
       window.removeEventListener("pointermove", moveGlow);
       document.documentElement.removeEventListener("mouseleave", hideGlow);
+    };
+  }, []);
+  useEffect(() => {
+    const updateOnlineState = () => setIsOnline(navigator.onLine);
+    window.addEventListener("online", updateOnlineState);
+    window.addEventListener("offline", updateOnlineState);
+    return () => {
+      window.removeEventListener("online", updateOnlineState);
+      window.removeEventListener("offline", updateOnlineState);
     };
   }, []);
   useEffect(() => {
@@ -1112,6 +1163,9 @@ export default function App() {
   };
   return (
     <div className="app-shell">
+      <a className="skip-link" href="#main-content">
+        Skip to content
+      </a>
       <div className="cursor-underglow" aria-hidden="true" />
       <div
         className={`pull-refresh ${refreshState}`}
@@ -1130,6 +1184,12 @@ export default function App() {
               : "Pull to refresh"}
         </span>
       </div>
+      {!isOnline && (
+        <div className="offline-banner" role="status">
+          <span className="notification-dot" />
+          You’re offline. Showing the latest available campus information.
+        </div>
+      )}
       <Sidebar active={page} onChange={go} />
       <div className="main-column">
         <Header
@@ -1137,6 +1197,7 @@ export default function App() {
           onSearch={setSearch}
           dark={dark}
           onToggleTheme={() => setDark((current) => !current)}
+          isOnline={isOnline}
         />
         <main id="main-content" aria-busy={isNavigating}>
           <div className={`page-stage ${isNavigating ? "is-navigating" : ""}`} key={page}>
