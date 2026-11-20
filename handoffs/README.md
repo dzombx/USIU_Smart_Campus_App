@@ -4,4 +4,4 @@ This directory contains deployment handoff artifacts for the existing AppDeploy 
 
 `USIU_Smart_Campus_v10_Login_Contrast.zip` is intended for Marlies to upload into the existing AppDeploy project. It must not be unpacked over this repository's root source tree: the ZIP uses the AppDeploy-managed `@appdeploy/client` boundary and a different package/toolchain from the current Vite 8/Tailwind 4 Figma Make app.
 
-The accompanying audit records the login/authentication review, backend hash comparison, secret scan, chatbot contract checks, and build verification. Emmanuel's remaining work is the backend `POST /api/chat` route; the ZIP does not contain a Gemini key.
+The accompanying audit records the login/authentication review, backend hash comparison, secret scan, chatbot contract checks, and build verification. Emmanuel's backend is also included as a separate ZIP handoff with its own audit. It must be deployed or mounted non-destructively and must not replace Marlies' authentication, database, credentials, routes, or realtime behavior. The archive contains no Gemini key; `GEMINI_API_KEY` must be configured only as a server-side managed secret.
