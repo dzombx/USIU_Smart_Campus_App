@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, useTransition, type ReactNode } from "react";
 
 type Page = "Home" | "Campus Directory" | "Events" | "Student Services" | "Campus Chatbot";
 
@@ -97,6 +97,12 @@ const iconPaths: Record<string, ReactNode> = {
     <>
       <path d="m22 2-7 20-4-9-9-4Z" />
       <path d="M22 2 11 13" />
+    </>
+  ),
+  copy: (
+    <>
+      <rect x="8" y="8" width="11" height="11" rx="2" />
+      <path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" />
     </>
   ),
   sun: (
@@ -218,7 +224,12 @@ const upcomingEvents = events.filter((event) => new Date(`${event.date}T23:59:59
 function Sidebar({ active, onChange }: { active: Page; onChange: (page: Page) => void }) {
   return (
     <aside className="sidebar">
-      <button className="brand" onClick={() => onChange("Home")} aria-label="Go to home">
+      <button
+        type="button"
+        className="brand"
+        onClick={() => onChange("Home")}
+        aria-label="Go to home"
+      >
         <span className="brand-mark">
           <span>U</span>
         </span>
@@ -231,9 +242,11 @@ function Sidebar({ active, onChange }: { active: Page; onChange: (page: Page) =>
         <p className="nav-label">CAMPUS HUB</p>
         {navItems.map((item) => (
           <button
+            type="button"
             key={item.label}
             className={`nav-item ${active === item.label ? "active" : ""}`}
             onClick={() => onChange(item.label)}
+            aria-current={active === item.label ? "page" : undefined}
           >
             <Icon name={item.icon} size={19} />
             <span>{item.label}</span>
@@ -255,7 +268,9 @@ function Sidebar({ active, onChange }: { active: Page; onChange: (page: Page) =>
           <strong>Alex Morgan</strong>
           <span>Demo profile</span>
         </div>
-        <button aria-label="Profile options">•••</button>
+        <button type="button" aria-label="Profile options">
+          •••
+        </button>
       </div>
     </aside>
   );
@@ -266,30 +281,74 @@ function Header({
   onSearch,
   dark,
   onToggleTheme,
+  isOnline,
 }: {
   page: Page;
   onSearch: (term: string) => void;
   dark: boolean;
   onToggleTheme: () => void;
+  isOnline: boolean;
 }) {
+  const [openPopover, setOpenPopover] = useState<"notifications" | "account" | null>(null);
+  const [hasUnread, setHasUnread] = useState(true);
+  const [accountNotice, setAccountNotice] = useState("");
+  const headerRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    const closeOnOutsidePointer = (event: PointerEvent) => {
+      if (event.target instanceof Node && !headerRef.current?.contains(event.target)) {
+        setOpenPopover(null);
+      }
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpenPopover(null);
+    };
+    document.addEventListener("pointerdown", closeOnOutsidePointer);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("pointerdown", closeOnOutsidePointer);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, []);
+
+  const togglePopover = (popover: "notifications" | "account") => {
+    setAccountNotice("");
+    setOpenPopover((current) => (current === popover ? null : popover));
+  };
+  const shortcutLabel = /Mac|iPhone|iPad/.test(navigator.platform) ? "⌘ K" : "Ctrl K";
+
   return (
-    <header className="topbar">
+    <header className="topbar" ref={headerRef}>
       <div className="mobile-brand">
         <span className="brand-mark">
           <span>U</span>
         </span>
         <strong>USIU Smart Campus</strong>
       </div>
+      <div className="topbar-context" aria-live="polite">
+        <span>USIU-AFRICA · CAMPUS HUB</span>
+        <strong>
+          {page}
+          <span className={`connection-status ${isOnline ? "online" : "offline"}`}>
+            <i /> {isOnline ? "Online" : "Offline"}
+          </span>
+        </strong>
+      </div>
       <div className="search-wrap">
         <Icon name="search" size={18} />
         <input
-          aria-label="Search the prototype"
+          id="campus-search"
+          aria-label={`Search ${page === "Home" ? "the campus hub" : page.toLowerCase()}`}
           onChange={(e) => onSearch(e.target.value)}
           placeholder={page === "Home" ? "Search the campus hub…" : `Search ${page.toLowerCase()}…`}
+          autoComplete="off"
+          enterKeyHint="search"
+          spellCheck={false}
         />
-        <kbd>⌘ K</kbd>
+        <kbd>{shortcutLabel}</kbd>
       </div>
       <button
+        type="button"
         className="theme-toggle"
         onClick={onToggleTheme}
         aria-label={`Switch to ${dark ? "light" : "dark"} mode`}
@@ -302,11 +361,94 @@ function Header({
           <Icon name="moon" size={14} />
         </span>
       </button>
-      <button className="icon-button" aria-label="Notifications">
-        <Icon name="bell" size={20} />
-        <i />
-      </button>
-      <button className="mobile-avatar">AM</button>
+      <div className="popover-anchor">
+        <button
+          type="button"
+          className="icon-button"
+          aria-label="Notifications"
+          aria-expanded={openPopover === "notifications"}
+          aria-controls="notifications-popover"
+          onClick={() => togglePopover("notifications")}
+        >
+          <Icon name="bell" size={20} />
+          {hasUnread && <i />}
+        </button>
+        {openPopover === "notifications" && (
+          <div
+            className="popover notifications-popover"
+            id="notifications-popover"
+            role="dialog"
+            aria-label="Notifications"
+          >
+            <div className="popover-heading">
+              <strong>Notifications</strong>
+              <button type="button" onClick={() => setHasUnread(false)} disabled={!hasUnread}>
+                {hasUnread ? "Mark read" : "All read"}
+              </button>
+            </div>
+            <div className="notification-item">
+              <span className="notification-dot" />
+              <div>
+                <strong>Campus hub is ready</strong>
+                <p>Browse official services, contacts, and upcoming events.</p>
+              </div>
+            </div>
+            <span className="popover-footnote">Notifications will appear here when connected.</span>
+          </div>
+        )}
+      </div>
+      <div className="popover-anchor account-anchor">
+        <button
+          type="button"
+          className="mobile-avatar account-button"
+          aria-label="Open profile"
+          aria-expanded={openPopover === "account"}
+          aria-controls="account-popover"
+          onClick={() => togglePopover("account")}
+        >
+          AM
+        </button>
+        {openPopover === "account" && (
+          <div
+            className="popover account-popover"
+            id="account-popover"
+            role="dialog"
+            aria-label="Account menu"
+          >
+            <div className="account-summary">
+              <div className="avatar">AM</div>
+              <div>
+                <strong>Alex Morgan</strong>
+                <span>Demo student profile</span>
+              </div>
+            </div>
+            <button
+              type="button"
+              className="popover-action"
+              onClick={() =>
+                setAccountNotice("Profile settings are ready for your student account connection.")
+              }
+            >
+              Profile settings
+            </button>
+            <button
+              type="button"
+              className="popover-action"
+              onClick={() => {
+                onToggleTheme();
+                setOpenPopover(null);
+              }}
+            >
+              Switch to {dark ? "light" : "dark"} mode
+            </button>
+            {accountNotice && (
+              <span className="popover-status" role="status">
+                {accountNotice}
+              </span>
+            )}
+          </div>
+        )}
+      </div>
     </header>
   );
 }
@@ -508,6 +650,7 @@ function Directory({ search }: { search: string }) {
             key={item}
             className={`filter ${filter === item ? "active" : ""}`}
             onClick={() => setFilter(item)}
+            aria-pressed={filter === item}
           >
             {item}
           </button>
@@ -526,8 +669,14 @@ function Directory({ search }: { search: string }) {
                 {entry.place}
               </p>
               <div className="contact-links">
-                <a href={`tel:${entry.phone.replace(/\s/g, "")}`}>{entry.phone}</a>
-                <a href={`mailto:${entry.email}`}>{entry.email}</a>
+                <span className="contact-action">
+                  <a href={`tel:${entry.phone.replace(/\s/g, "")}`}>{entry.phone}</a>
+                  <CopyContact value={entry.phone} label="Copy phone number" />
+                </span>
+                <span className="contact-action">
+                  <a href={`mailto:${entry.email}`}>{entry.email}</a>
+                  <CopyContact value={entry.email} label="Copy email address" />
+                </span>
               </div>
               <a className="source-link" href={entry.url} target="_blank" rel="noreferrer">
                 Official source ↗
@@ -538,6 +687,26 @@ function Directory({ search }: { search: string }) {
       </div>
       {!visible.length && <EmptyState />}
     </PageShell>
+  );
+}
+
+function CopyContact({ value, label }: { value: string; label: string }) {
+  const [copied, setCopied] = useState(false);
+  const copy = async () => {
+    if (!navigator.clipboard) return;
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1200);
+    } catch {
+      setCopied(false);
+    }
+  };
+  return (
+    <button type="button" className="contact-copy" onClick={copy} aria-label={label}>
+      <Icon name="copy" size={12} />
+      <span>{copied ? "Copied" : "Copy"}</span>
+    </button>
   );
 }
 
@@ -561,6 +730,7 @@ function Events({ search }: { search: string }) {
             key={item}
             className={`filter ${filter === item ? "active" : ""}`}
             onClick={() => setFilter(item)}
+            aria-pressed={filter === item}
           >
             {item}
           </button>
@@ -568,7 +738,7 @@ function Events({ search }: { search: string }) {
       </div>
       <div className="event-page-list">
         {visible.map((event) => (
-          <article className="event-page-card" key={event.title}>
+          <article className={`event-page-card ${event.color}`} key={event.title}>
             <span className="date-box large">
               <small>{event.month}</small>
               <strong>{event.day}</strong>
@@ -663,13 +833,36 @@ function Services({ search }: { search: string }) {
   );
 }
 
+function BotMessage({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+  const copy = async () => {
+    if (!navigator.clipboard) return;
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1400);
+    } catch {
+      setCopied(false);
+    }
+  };
+
+  return (
+    <div className="message bot-message">
+      <span>{text}</span>
+      <button type="button" className="message-copy" onClick={copy} aria-label="Copy answer">
+        <Icon name="copy" size={14} />
+        <span>{copied ? "Copied" : "Copy"}</span>
+      </button>
+    </div>
+  );
+}
+
 function Chatbot() {
-  const [messages, setMessages] = useState([
-    {
-      from: "bot",
-      text: "Hi Alex. Ask me about official USIU-Africa contacts, student services, or currently listed events. Information was reviewed on November 8, 2026.",
-    },
-  ]);
+  const welcomeMessage = {
+    from: "bot",
+    text: "Hi Alex. Ask me about official USIU-Africa contacts, student services, or currently listed events. Information was reviewed on November 8, 2026.",
+  };
+  const [messages, setMessages] = useState([welcomeMessage]);
   const [input, setInput] = useState("");
   const answer = (question: string) => {
     const query = question.toLowerCase();
@@ -692,13 +885,14 @@ function Chatbot() {
     return "I don’t have a verified answer for that yet. Please use the official source links in the Directory and Student Services, or contact USIU-Africa’s main line at +254 730 116 000.";
   };
   const send = () => {
-    if (!input.trim()) return;
-    setMessages([
-      ...messages,
-      { from: "user", text: input },
+    const question = input.trim();
+    if (!question) return;
+    setMessages((current) => [
+      ...current,
+      { from: "user", text: question },
       {
         from: "bot",
-        text: answer(input),
+        text: answer(question),
       },
     ]);
     setInput("");
@@ -720,31 +914,51 @@ function Chatbot() {
               <i /> Official-source guide
             </span>
           </div>
+          <button
+            type="button"
+            className="chat-clear"
+            onClick={() => setMessages([welcomeMessage])}
+            disabled={messages.length === 1}
+          >
+            Clear
+          </button>
         </div>
-        <div className="messages">
-          {messages.map((m, i) => (
-            <div key={i} className={`message ${m.from}`}>
-              {m.text}
-            </div>
-          ))}
+        <div className="messages" role="log" aria-live="polite" aria-label="Chat messages">
+          {messages.map((m, i) =>
+            m.from === "bot" ? (
+              <BotMessage key={i} text={m.text} />
+            ) : (
+              <div key={i} className="message user">
+                {m.text}
+              </div>
+            ),
+          )}
         </div>
         <div className="suggestions">
-          <button onClick={() => setInput("Where is the library?")}>Where is the library?</button>
-          <button onClick={() => setInput("Show me upcoming events")}>
+          <button type="button" onClick={() => setInput("Where is the library?")}>
+            Where is the library?
+          </button>
+          <button type="button" onClick={() => setInput("Show me upcoming events")}>
             What events are coming up?
           </button>
         </div>
-        <div className="composer">
+        <form
+          className="composer"
+          onSubmit={(event) => {
+            event.preventDefault();
+            send();
+          }}
+        >
           <input
+            aria-label="Ask the campus assistant"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && send()}
             placeholder="Ask about campus services…"
           />
-          <button onClick={send} aria-label="Send message">
+          <button type="submit" aria-label="Send message" disabled={!input.trim()}>
             <Icon name="send" size={19} />
           </button>
-        </div>
+        </form>
       </div>
     </PageShell>
   );
@@ -761,11 +975,12 @@ function PageShell({
   description: string;
   children: ReactNode;
 }) {
+  const headingId = `${title.toLowerCase().replace(/\s+/g, "-")}-title`;
   return (
     <>
-      <section className="page-title">
+      <section className="page-title" aria-labelledby={headingId}>
         <span className="section-kicker">{kicker}</span>
-        <h1>{title}</h1>
+        <h1 id={headingId}>{title}</h1>
         <p>{description}</p>
       </section>
       <div className="prototype-notice">
@@ -796,6 +1011,14 @@ function EmptyState() {
 export default function App() {
   const [page, setPage] = useState<Page>("Home");
   const [search, setSearch] = useState("");
+  const [isOnline, setIsOnline] = useState(() => navigator.onLine);
+  const [isNavigating, startNavigation] = useTransition();
+  const [pullDistance, setPullDistance] = useState(0);
+  const [refreshState, setRefreshState] = useState<"idle" | "pulling" | "ready" | "refreshing">(
+    "idle",
+  );
+  const pullDistanceRef = useRef(0);
+  const refreshStateRef = useRef<"idle" | "pulling" | "ready" | "refreshing">("idle");
   const [dark, setDark] = useState(() => {
     const saved = localStorage.getItem("usiu-theme");
     return saved ? saved === "dark" : window.matchMedia("(prefers-color-scheme: dark)").matches;
@@ -805,26 +1028,50 @@ export default function App() {
     localStorage.setItem("usiu-theme", dark ? "dark" : "light");
   }, [dark]);
   useEffect(() => {
-    if (!window.matchMedia("(pointer: fine)").matches) return;
+    const handleShortcut = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        document.getElementById("campus-search")?.focus();
+      }
+    };
+    window.addEventListener("keydown", handleShortcut);
+    return () => window.removeEventListener("keydown", handleShortcut);
+  }, []);
+  useEffect(() => {
+    const pointerQuery = window.matchMedia("(pointer: fine)");
+    const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+    if (!pointerQuery.matches || motionQuery.matches) return;
 
     const root = document.documentElement;
     const glow = document.querySelector<HTMLElement>(".cursor-underglow");
     let frame = 0;
+    let pointerX = window.innerWidth / 2;
+    let pointerY = window.innerHeight / 2;
+    let overReadableContent = false;
+
+    const renderGlow = () => {
+      frame = 0;
+      root.style.setProperty("--pointer-x", `${pointerX}px`);
+      root.style.setProperty("--pointer-y", `${pointerY}px`);
+    };
 
     const moveGlow = (event: PointerEvent) => {
-      cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(() => {
-        root.style.setProperty("--pointer-x", `${event.clientX}px`);
-        root.style.setProperty("--pointer-y", `${event.clientY}px`);
-        glow?.classList.add("is-visible");
-        glow?.classList.toggle(
-          "is-hovering",
-          event.target instanceof Element &&
-            Boolean(event.target.closest("a, button, input, .quick-card, .service-card")),
-        );
-      });
+      pointerX = event.clientX;
+      pointerY = event.clientY;
+      const nextOverReadableContent =
+        event.target instanceof Element &&
+        Boolean(event.target.closest("p,h1,h2,h3,h4,h5,span,a,button,input,label,li"));
+
+      if (nextOverReadableContent !== overReadableContent) {
+        overReadableContent = nextOverReadableContent;
+        glow?.classList.toggle("is-readable", overReadableContent);
+      }
+
+      glow?.classList.add("is-visible");
+      if (!frame) frame = requestAnimationFrame(renderGlow);
     };
-    const hideGlow = () => glow?.classList.remove("is-visible");
+
+    const hideGlow = () => glow?.classList.remove("is-visible", "is-readable");
 
     window.addEventListener("pointermove", moveGlow, { passive: true });
     document.documentElement.addEventListener("mouseleave", hideGlow);
@@ -834,28 +1081,115 @@ export default function App() {
       document.documentElement.removeEventListener("mouseleave", hideGlow);
     };
   }, []);
+  useEffect(() => {
+    const updateOnlineState = () => setIsOnline(navigator.onLine);
+    window.addEventListener("online", updateOnlineState);
+    window.addEventListener("offline", updateOnlineState);
+    return () => {
+      window.removeEventListener("online", updateOnlineState);
+      window.removeEventListener("offline", updateOnlineState);
+    };
+  }, []);
+  useEffect(() => {
+    const threshold = 58;
+    let startY = 0;
+    let tracking = false;
+    let refreshTimer = 0;
+
+    const handleTouchStart = (event: TouchEvent) => {
+      if (window.scrollY <= 1 && event.touches.length === 1) {
+        startY = event.touches[0].clientY;
+        tracking = true;
+      }
+    };
+    const handleTouchMove = (event: TouchEvent) => {
+      if (!tracking || event.touches.length !== 1 || refreshStateRef.current === "refreshing")
+        return;
+      const delta = event.touches[0].clientY - startY;
+      if (delta <= 0) {
+        tracking = false;
+        pullDistanceRef.current = 0;
+        setPullDistance(0);
+        refreshStateRef.current = "idle";
+        setRefreshState("idle");
+        return;
+      }
+      const distance = Math.min(92, delta * 0.42);
+      pullDistanceRef.current = distance;
+      setPullDistance(distance);
+      refreshStateRef.current = distance >= threshold ? "ready" : "pulling";
+      setRefreshState(distance >= threshold ? "ready" : "pulling");
+      if (event.cancelable) event.preventDefault();
+    };
+    const handleTouchEnd = () => {
+      if (!tracking) return;
+      tracking = false;
+      if (pullDistanceRef.current >= threshold) {
+        refreshStateRef.current = "refreshing";
+        setRefreshState("refreshing");
+        pullDistanceRef.current = 66;
+        setPullDistance(66);
+        refreshTimer = window.setTimeout(() => {
+          refreshStateRef.current = "idle";
+          pullDistanceRef.current = 0;
+          setRefreshState("idle");
+          setPullDistance(0);
+        }, 650);
+      } else {
+        refreshStateRef.current = "idle";
+        pullDistanceRef.current = 0;
+        setRefreshState("idle");
+        setPullDistance(0);
+      }
+    };
+
+    window.addEventListener("touchstart", handleTouchStart, { passive: true });
+    window.addEventListener("touchmove", handleTouchMove, { passive: false });
+    window.addEventListener("touchend", handleTouchEnd, { passive: true });
+    return () => {
+      window.clearTimeout(refreshTimer);
+      window.removeEventListener("touchstart", handleTouchStart);
+      window.removeEventListener("touchmove", handleTouchMove);
+      window.removeEventListener("touchend", handleTouchEnd);
+    };
+  }, []);
   const go = (next: Page) => {
-    setPage(next);
-    setSearch("");
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    if (next === page) return;
+    startNavigation(() => {
+      setPage(next);
+      setSearch("");
+    });
+    window.scrollTo({ top: 0, behavior: "auto" });
   };
   return (
     <div className="app-shell">
-      <svg className="liquid-filter" aria-hidden="true">
-        <defs>
-          <filter id="liquid-refraction" x="-30%" y="-30%" width="160%" height="160%">
-            <feTurbulence
-              type="fractalNoise"
-              baseFrequency="0.018 0.045"
-              numOctaves="2"
-              seed="7"
-              result="noise"
-            />
-            <feDisplacementMap in="SourceGraphic" in2="noise" scale="7" />
-          </filter>
-        </defs>
-      </svg>
+      <a className="skip-link" href="#main-content">
+        Skip to content
+      </a>
       <div className="cursor-underglow" aria-hidden="true" />
+      <div
+        className={`pull-refresh ${refreshState}`}
+        style={{ transform: `translate3d(-50%, ${Math.max(0, pullDistance - 42)}px, 0)` }}
+        role="status"
+        aria-live="polite"
+      >
+        <span className="refresh-glyph">
+          <Icon name="arrow" size={15} />
+        </span>
+        <span>
+          {refreshState === "refreshing"
+            ? "Refreshing campus hub"
+            : refreshState === "ready"
+              ? "Release to refresh"
+              : "Pull to refresh"}
+        </span>
+      </div>
+      {!isOnline && (
+        <div className="offline-banner" role="status">
+          <span className="notification-dot" />
+          You’re offline. Showing the latest available campus information.
+        </div>
+      )}
       <Sidebar active={page} onChange={go} />
       <div className="main-column">
         <Header
@@ -863,9 +1197,10 @@ export default function App() {
           onSearch={setSearch}
           dark={dark}
           onToggleTheme={() => setDark((current) => !current)}
+          isOnline={isOnline}
         />
-        <main>
-          <div className="page-stage" key={page}>
+        <main id="main-content" aria-busy={isNavigating}>
+          <div className={`page-stage ${isNavigating ? "is-navigating" : ""}`} key={page}>
             {page === "Home" && <Home go={go} />}
             {page === "Campus Directory" && <Directory search={search} />}
             {page === "Events" && <Events search={search} />}
@@ -876,9 +1211,11 @@ export default function App() {
         <nav className="mobile-nav" aria-label="Mobile navigation">
           {navItems.map((item) => (
             <button
+              type="button"
               key={item.label}
               onClick={() => go(item.label)}
               className={page === item.label ? "active" : ""}
+              aria-current={page === item.label ? "page" : undefined}
             >
               <Icon name={item.icon} size={20} />
               <span>
