@@ -1,0 +1,81 @@
+USIU Smart Campus — urgent chatbot 403 repair prompt
+
+Target existing AppDeploy project:
+https://smart-campus-etaz3o.v2.appdeploy.ai/
+
+The chatbot is still not working. I tested the deployed application and the frontend request:
+
+POST /api/chat
+
+returns:
+
+HTTP 403
+AppDeploy HTML page: “Access restricted”
+Server: AmazonS3
+
+This proves that AppDeploy is blocking the request before Emmanuel’s Node.js chatbot backend receives it. This is a deployment/routing problem, not a Gemini answer problem and not a chatbot UI problem.
+
+Please fix the existing AppDeploy project. Do not create a separate frontend project and do not replace the existing backend.
+
+Required actions:
+
+1. Make a backup/version of the current AppDeploy project before changing anything.
+
+2. Preserve all existing Marlies backend files, authentication, database, demo accounts, managed credentials, API contracts, all /api/auth/* routes, and realtime behavior.
+
+3. Deploy the supplied usiu-smart-campus-chatbot-backend.zip as a Node.js 22+ backend service, or selectively add its /api/chat route to the existing backend after inspecting the current server. Do not overwrite the current server entrypoint or copy the chatbot package root files over the existing backend.
+
+4. Configure this only as an AppDeploy server-side managed secret:
+
+GEMINI_API_KEY=<the real Gemini key>
+
+Never put this key in React/browser code, GitHub, the ZIP, WhatsApp, or normal chat messages.
+
+5. Connect the existing frontend same-origin request:
+
+POST /api/chat
+
+so it reaches Emmanuel’s chatbot backend. The request must not be handled by the static frontend fallback or by AppDeploy’s access-restriction page. Do not change the frontend to use a client-side Gemini key or a fake response.
+
+6. Make sure the chatbot service is running on Node.js 22 or later and receives AppDeploy’s PORT value.
+
+7. Verify this health endpoint:
+
+GET /health
+
+It must return HTTP 200 JSON:
+
+{"status":"ok"}
+
+8. Verify the chatbot endpoint with this request:
+
+POST /api/chat
+Content-Type: application/json
+
+{
+  "question": "What facilities are available?",
+  "history": [],
+  "language": "en"
+}
+
+The response must be JSON containing:
+
+answer
+sourceIds
+webSources
+destination
+speechLanguage
+
+9. Do not claim the integration is complete if /api/chat returns HTML, HTTP 403, an AppDeploy access-restriction page, or a static frontend page. It must return JSON from Emmanuel’s chatbot backend.
+
+10. After fixing it, report:
+
+- backup/version identifier;
+- where the chatbot backend was deployed;
+- confirmation that GEMINI_API_KEY is configured as a server-side managed secret;
+- /health result;
+- /api/chat test result;
+- confirmation that /api/auth/*, authentication, database, credentials, demo accounts, and realtime behavior were preserved;
+- the deployed preview URL.
+
+The frontend already calls the correct same-origin endpoint. The required fix is to deploy and route the backend correctly, not to redesign the chatbot UI.
